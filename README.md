@@ -1,6 +1,6 @@
 # PyReps
 
-A spaced-repetition Python coding flashcard system for interview prep practice, built with PyQt6.
+A spaced-repetition Python coding flashcard system for coding pattern practice, built with PyQt6.
 
 ---
 

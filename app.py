@@ -9,6 +9,7 @@ import json
 import shutil
 import subprocess
 import re
+import random
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -206,7 +207,7 @@ class PythonHighlighter(QSyntaxHighlighter):
         self._rules = []
 
         keyword_fmt = QTextCharFormat()
-        keyword_fmt.setForeground(QColor("#c792ea"))
+        keyword_fmt.setForeground(QColor("#569cd6"))
         keyword_fmt.setFontWeight(700)
         keywords = [
             "False", "None", "True", "and", "as", "assert", "async", "await",
@@ -219,7 +220,7 @@ class PythonHighlighter(QSyntaxHighlighter):
             self._rules.append((re.compile(rf"\b{kw}\b"), keyword_fmt))
 
         builtin_fmt = QTextCharFormat()
-        builtin_fmt.setForeground(QColor("#82aaff"))
+        builtin_fmt.setForeground(QColor("#dcdcaa"))
         builtins = [
             "print", "len", "range", "enumerate", "zip", "map", "filter",
             "sorted", "reversed", "list", "dict", "set", "tuple", "str",
@@ -230,21 +231,21 @@ class PythonHighlighter(QSyntaxHighlighter):
             self._rules.append((re.compile(rf"\b{b}\b"), builtin_fmt))
 
         str_fmt = QTextCharFormat()
-        str_fmt.setForeground(QColor("#c3e88d"))
+        str_fmt.setForeground(QColor("#ce9178"))
         self._rules.append((re.compile(r'"[^"\\]*(\\.[^"\\]*)*"'), str_fmt))
         self._rules.append((re.compile(r"'[^'\\]*(\\.[^'\\]*)*'"), str_fmt))
 
         comment_fmt = QTextCharFormat()
-        comment_fmt.setForeground(QColor("#546e7a"))
+        comment_fmt.setForeground(QColor("#6a9955"))
         comment_fmt.setFontItalic(True)
         self._rules.append((re.compile(r"#[^\n]*"), comment_fmt))
 
         decorator_fmt = QTextCharFormat()
-        decorator_fmt.setForeground(QColor("#ffcb6b"))
+        decorator_fmt.setForeground(QColor("#c586c0"))
         self._rules.append((re.compile(r"@\w+"), decorator_fmt))
 
         number_fmt = QTextCharFormat()
-        number_fmt.setForeground(QColor("#f78c6c"))
+        number_fmt.setForeground(QColor("#b5cea8"))
         self._rules.append((re.compile(r"\b\d+\.?\d*\b"), number_fmt))
 
     def highlightBlock(self, text: str):
@@ -313,12 +314,12 @@ class ResultsPanel(QWidget):
         layout.setContentsMargins(8, 8, 8, 8)
 
         header = QLabel("Test Results")
-        header.setStyleSheet("font-weight: bold; font-size: 14px; color: #cdd3de;")
+        header.setStyleSheet("font-weight: bold; font-size: 14px; color: #d4d4d4;")
         layout.addWidget(header)
 
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
-        self.scroll.setStyleSheet("border: none;")
+        self.scroll.setStyleSheet("border: none; background: #1e1e1e;")
         self.results_container = QWidget()
         self.results_layout = QVBoxLayout(self.results_container)
         self.results_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -341,7 +342,7 @@ class ResultsPanel(QWidget):
         if not results:
             label = QLabel("No test results found.\n\nRaw output:\n" + raw_output[:500])
             label.setWordWrap(True)
-            label.setStyleSheet("color: #f07178; font-size: 12px;")
+            label.setStyleSheet("color: #f44747; font-size: 12px;")
             self.results_layout.addWidget(label)
             return
 
@@ -356,7 +357,7 @@ class ResultsPanel(QWidget):
 
             status = r["status"]
             icon = "✅" if status == "PASSED" else "❌"
-            color = "#c3e88d" if status == "PASSED" else "#f07178"
+            color = "#4ec9b0" if status == "PASSED" else "#f44747"
 
             # Strip the file path prefix for display
             name = r["name"]
@@ -370,17 +371,17 @@ class ResultsPanel(QWidget):
 
             if r.get("detail"):
                 detail = QLabel(r["detail"])
-                detail.setStyleSheet("color: #89ddff; font-size: 11px; font-family: monospace;")
+                detail.setStyleSheet("color: #9cdcfe; font-size: 11px; font-family: monospace;")
                 detail.setWordWrap(True)
                 fl.addWidget(detail)
 
             frame.setStyleSheet(
-                f"QFrame {{ border: 1px solid {'#2d5a27' if status == 'PASSED' else '#5a2727'}; "
-                f"border-radius: 4px; background: {'#1a2e1a' if status == 'PASSED' else '#2e1a1a'}; }}"
+                f"QFrame {{ border: 1px solid {'#264f3c' if status == 'PASSED' else '#4f2626'}; "
+                f"border-radius: 4px; background: {'#1a2e24' if status == 'PASSED' else '#2e1a1a'}; }}"
             )
             self.results_layout.addWidget(frame)
 
-        color = "#c3e88d" if passed == total else "#f07178"
+        color = "#4ec9b0" if passed == total else "#f44747"
         self.summary_label.setStyleSheet(f"font-weight: bold; color: {color}; font-size: 13px;")
         self.summary_label.setText(f"{passed}/{total} tests passed")
 
@@ -398,21 +399,21 @@ class QuestionPanel(QWidget):
 
         self.name_label = QLabel("")
         self.name_label.setStyleSheet(
-            "font-weight: bold; font-size: 14px; color: #cdd3de;"
+            "font-weight: bold; font-size: 14px; color: #d4d4d4;"
         )
         self.name_label.setWordWrap(True)
         layout.addWidget(self.name_label)
 
         self.category_label = QLabel("")
         self.category_label.setStyleSheet(
-            "font-size: 11px; color: #82aaff; font-style: italic; margin-bottom: 6px;"
+            "font-size: 11px; color: #569cd6; font-style: italic; margin-bottom: 6px;"
         )
         layout.addWidget(self.category_label)
 
         self.text_browser = QTextBrowser()
         self.text_browser.setOpenExternalLinks(True)
         self.text_browser.setStyleSheet(
-            "background: #1a1f2e; color: #cdd3de; border: none; font-size: 13px;"
+            "background: #1e1e1e; color: #d4d4d4; border: none; font-size: 13px;"
         )
         layout.addWidget(self.text_browser)
 
@@ -422,7 +423,7 @@ class QuestionPanel(QWidget):
         self.category_label.setText("")
 
         if not md_path.exists():
-            self.text_browser.setHtml("<p style='color:#f07178'>question.md not found.</p>")
+            self.text_browser.setHtml("<p style='color:#f44747'>question.md not found.</p>")
             return
 
         md_text = md_path.read_text()
@@ -443,15 +444,15 @@ class QuestionPanel(QWidget):
         )
         styled = f"""
         <style>
-            body {{ font-family: -apple-system, sans-serif; font-size: 13px; color: #cdd3de; }}
-            h1, h2, h3 {{ color: #82aaff; }}
-            code {{ background: #252d3d; color: #c3e88d; padding: 1px 4px;
+            body {{ font-family: -apple-system, sans-serif; font-size: 13px; color: #d4d4d4; }}
+            h1, h2, h3 {{ color: #569cd6; }}
+            code {{ background: #2d2d2d; color: #ce9178; padding: 1px 4px;
                     border-radius: 3px; font-family: 'Courier New', monospace; }}
-            pre {{ background: #252d3d; padding: 10px; border-radius: 4px;
+            pre {{ background: #2d2d2d; padding: 10px; border-radius: 4px;
                    overflow-x: auto; font-family: 'Courier New', monospace; }}
-            strong {{ color: #ffcb6b; }}
+            strong {{ color: #dcdcaa; }}
             details {{ margin: 6px 0; }}
-            summary {{ cursor: pointer; color: #89ddff; }}
+            summary {{ cursor: pointer; color: #9cdcfe; }}
         </style>
         {html}
         """
@@ -473,8 +474,8 @@ class CodeEditor(QPlainTextEdit):
         self.setFont(font)
         self.setTabStopDistance(4 * self.fontMetrics().horizontalAdvance(" "))
         self.setStyleSheet(
-            "background: #1a1f2e; color: #cdd3de; border: none; "
-            "selection-background-color: #3d4f6e;"
+            "background: #1e1e1e; color: #d4d4d4; border: none; "
+            "selection-background-color: #264f78;"
         )
         self._highlighter = PythonHighlighter(self.document())
 
@@ -486,6 +487,45 @@ class CodeEditor(QPlainTextEdit):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Answer panel (read-only reference solution)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AnswerPanel(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        header = QWidget()
+        header.setFixedHeight(28)
+        header.setStyleSheet("background: #252526; border-top: 1px solid #3c3c3c;")
+        hl = QHBoxLayout(header)
+        hl.setContentsMargins(12, 0, 12, 0)
+        lbl = QLabel("Reference Answer")
+        lbl.setStyleSheet("color: #dcdcaa; font-size: 12px; font-weight: bold;")
+        hl.addWidget(lbl)
+        layout.addWidget(header)
+
+        self.editor = CodeEditor()
+        self.editor.setReadOnly(True)
+        self.editor.setStyleSheet(
+            "background: #1e1e1e; color: #9cdcfe; border: none; "
+            "selection-background-color: #264f78;"
+        )
+        layout.addWidget(self.editor)
+
+    def load_answer(self, path: Path):
+        if path.exists():
+            self.editor.setPlainText(path.read_text())
+        else:
+            self.editor.setPlainText("# answer.py not found for this question\n")
+
+    def clear(self):
+        self.editor.setPlainText("")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Bottom bar
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -493,25 +533,39 @@ class BottomBar(QWidget):
     submit_clicked = pyqtSignal()
     skip_clicked = pyqtSignal()
     next_clicked = pyqtSignal()
+    answer_toggled = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedHeight(52)
-        self.setStyleSheet("background: #141824; border-top: 1px solid #2a3045;")
+        self.setStyleSheet("background: #252526; border-top: 1px solid #3c3c3c;")
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(12, 6, 12, 6)
         layout.setSpacing(10)
 
         self.question_label = QLabel("No question loaded")
-        self.question_label.setStyleSheet("color: #82aaff; font-size: 13px;")
+        self.question_label.setStyleSheet("color: #569cd6; font-size: 13px;")
         layout.addWidget(self.question_label)
 
         layout.addStretch()
 
         self.progress_label = QLabel("")
-        self.progress_label.setStyleSheet("color: #546e7a; font-size: 12px;")
+        self.progress_label.setStyleSheet("color: #858585; font-size: 12px;")
         layout.addWidget(self.progress_label)
+
+        self.answer_btn = QPushButton("Show Answer")
+        self.answer_btn.setCheckable(True)
+        self.answer_btn.setFixedHeight(32)
+        self.answer_btn.setStyleSheet(
+            "QPushButton { background: #3c3c3c; color: #d4d4d4; border: 1px solid #555555; "
+            "border-radius: 4px; padding: 0 14px; font-size: 13px; }"
+            "QPushButton:hover { background: #4a4a4a; }"
+            "QPushButton:checked { background: #094771; color: #9cdcfe; border-color: #007acc; }"
+            "QPushButton:checked:hover { background: #0e639c; }"
+        )
+        self.answer_btn.toggled.connect(self._on_answer_btn_toggled)
+        layout.addWidget(self.answer_btn)
 
         self.submit_btn = QPushButton("Submit")
         self.submit_btn.setShortcut(QKeySequence("Ctrl+Return"))
@@ -534,11 +588,16 @@ class BottomBar(QWidget):
         self.next_btn.clicked.connect(self.next_clicked)
         layout.addWidget(self.next_btn)
 
+    def _on_answer_btn_toggled(self, checked: bool):
+        self.answer_btn.setText("Hide Answer" if checked else "Show Answer")
+        self.answer_toggled.emit(checked)
+
     def set_question(self, name: str, index: int, total: int):
         self.question_label.setText(name)
         self.progress_label.setText(f"{index} of {total} due today")
         self.next_btn.setVisible(False)
         self.submit_btn.setEnabled(True)
+        self.answer_btn.setChecked(False)
 
     def show_next_button(self):
         self.next_btn.setVisible(True)
@@ -571,12 +630,12 @@ class NoDueCardsWidget(QWidget):
         layout.addWidget(icon)
 
         msg = QLabel("All caught up!")
-        msg.setStyleSheet("font-size: 28px; font-weight: bold; color: #c3e88d;")
+        msg.setStyleSheet("font-size: 28px; font-weight: bold; color: #4ec9b0;")
         msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(msg)
 
         sub = QLabel(f"No cards are due today.\nNext review: {next_date}")
-        sub.setStyleSheet("font-size: 16px; color: #82aaff; margin-top: 8px;")
+        sub.setStyleSheet("font-size: 16px; color: #569cd6; margin-top: 8px;")
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(sub)
 
@@ -598,6 +657,7 @@ class MainWindow(QMainWindow):
         self.current_index: int = 0
         self.submitted: bool = False
         self._runner: TestRunnerThread | None = None
+        self._overlay_widget: QWidget | None = None
 
         self._setup_ui()
         self._setup_menu()
@@ -606,7 +666,7 @@ class MainWindow(QMainWindow):
     # ── UI construction ───────────────────────────────────────────────────
 
     def _setup_ui(self):
-        self.setStyleSheet("background: #1a1f2e; color: #cdd3de;")
+        self.setStyleSheet("background: #1e1e1e; color: #d4d4d4;")
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -618,14 +678,25 @@ class MainWindow(QMainWindow):
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.setHandleWidth(2)
         self.splitter.setStyleSheet(
-            "QSplitter::handle { background: #2a3045; }"
+            "QSplitter::handle { background: #3c3c3c; }"
         )
 
         self.question_panel = QuestionPanel()
         self.splitter.addWidget(self.question_panel)
 
+        self.center_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.center_splitter.setHandleWidth(2)
+        self.center_splitter.setStyleSheet(
+            "QSplitter::handle { background: #3c3c3c; }"
+        )
         self.editor = CodeEditor()
-        self.splitter.addWidget(self.editor)
+        self.center_splitter.addWidget(self.editor)
+        self.answer_panel = AnswerPanel()
+        self.answer_panel.setVisible(False)
+        self.center_splitter.addWidget(self.answer_panel)
+        self.center_splitter.setStretchFactor(0, 1)
+        self.center_splitter.setStretchFactor(1, 1)
+        self.splitter.addWidget(self.center_splitter)
 
         self.results_panel = ResultsPanel()
         self.splitter.addWidget(self.results_panel)
@@ -640,22 +711,23 @@ class MainWindow(QMainWindow):
         self.bottom_bar.submit_clicked.connect(self._on_submit)
         self.bottom_bar.skip_clicked.connect(self._on_skip)
         self.bottom_bar.next_clicked.connect(self._on_next)
+        self.bottom_bar.answer_toggled.connect(self._on_answer_toggle)
         root_layout.addWidget(self.bottom_bar)
 
         # Status bar
         self.status_bar = QStatusBar()
         self.status_bar.setStyleSheet(
-            "background: #141824; color: #546e7a; font-size: 11px; border-top: none;"
+            "background: #007acc; color: #ffffff; font-size: 11px; border-top: none;"
         )
         self.setStatusBar(self.status_bar)
 
     def _setup_menu(self):
         mb = self.menuBar()
         mb.setStyleSheet(
-            "QMenuBar { background: #141824; color: #cdd3de; }"
-            "QMenuBar::item:selected { background: #1e2535; }"
-            "QMenu { background: #1e2535; color: #cdd3de; }"
-            "QMenu::item:selected { background: #2a3a5e; }"
+            "QMenuBar { background: #252526; color: #d4d4d4; }"
+            "QMenuBar::item:selected { background: #2d2d2d; }"
+            "QMenu { background: #252526; color: #d4d4d4; border: 1px solid #3c3c3c; }"
+            "QMenu::item:selected { background: #094771; }"
         )
 
         # File menu
@@ -664,6 +736,10 @@ class MainWindow(QMainWindow):
         reload_action.setShortcut(QKeySequence("Ctrl+R"))
         reload_action.triggered.connect(self._load_session)
         file_menu.addAction(reload_action)
+        shuffle_action = QAction("Shuffle All Cards", self)
+        shuffle_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
+        shuffle_action.triggered.connect(self._shuffle_all)
+        file_menu.addAction(shuffle_action)
         file_menu.addSeparator()
         quit_action = QAction("Quit", self)
         quit_action.setShortcut(QKeySequence("Ctrl+Q"))
@@ -688,6 +764,7 @@ class MainWindow(QMainWindow):
     # ── Session management ────────────────────────────────────────────────
 
     def _load_session(self):
+        self._restore_splitter()
         self.root_dir = Path(self.config.get("root_dir", str(DEFAULT_ROOT)))
         questions_dir = self.root_dir / "questions"
         progress_path = self.root_dir / "results" / "progress.json"
@@ -701,7 +778,6 @@ class MainWindow(QMainWindow):
         all_questions = sorted(
             d.name for d in questions_dir.iterdir() if d.is_dir()
         )
-        import random
         self.due_questions = [q for q in all_questions if self.sr.is_due(q)]
         random.shuffle(self.due_questions)
 
@@ -738,6 +814,7 @@ class MainWindow(QMainWindow):
         # Load UI panels
         self.question_panel.load_question(question_id, question_dir / "question.md")
         self.editor.load_template(working_dir / "solution.py")
+        self.answer_panel.load_answer(working_dir / "answer.py")
         self.results_panel.clear()
 
         display_name = question_id.replace("_", " ").title()
@@ -776,6 +853,9 @@ class MainWindow(QMainWindow):
         status = "All tests passed!" if all_passed else "Some tests failed."
         self.status_bar.showMessage(status)
 
+    def _on_answer_toggle(self, checked: bool):
+        self.answer_panel.setVisible(checked)
+
     def _on_skip(self):
         question_id = self.due_questions[self.current_index]
         self.sr.record_result(question_id, correct=False)
@@ -792,44 +872,103 @@ class MainWindow(QMainWindow):
             self.results_panel.clear()
             self._load_question(self.current_index)
 
+    def _shuffle_all(self):
+        self.root_dir = Path(self.config.get("root_dir", str(DEFAULT_ROOT)))
+        questions_dir = self.root_dir / "questions"
+        progress_path = self.root_dir / "results" / "progress.json"
+        if not questions_dir.exists():
+            self._show_no_questions_dir(questions_dir)
+            return
+        self.sr = SpacedRepetitionManager(progress_path)
+        all_questions = sorted(d.name for d in questions_dir.iterdir() if d.is_dir())
+        self.due_questions = list(all_questions)
+        random.shuffle(self.due_questions)
+        self.current_index = 0
+        self.submitted = False
+        self._restore_splitter()
+        self._load_question(self.current_index)
+
     # ── Overlay helpers ───────────────────────────────────────────────────
 
     def _show_no_questions_dir(self, path: Path):
         self._replace_splitter_with(
             QLabel(
-                f"<h2 style='color:#f07178'>Questions directory not found</h2>"
-                f"<p style='color:#cdd3de'>Expected: <code>{path}</code></p>"
-                f"<p style='color:#82aaff'>Go to <b>Settings → Configure Root Directory</b> to set your PyReps root.</p>"
+                f"<h2 style='color:#f44747'>Questions directory not found</h2>"
+                f"<p style='color:#d4d4d4'>Expected: <code>{path}</code></p>"
+                f"<p style='color:#569cd6'>Go to <b>Settings → Configure Root Directory</b> to set your PyReps root.</p>"
             )
         )
 
     def _show_no_due_cards(self, next_date: str):
-        self._replace_splitter_with(NoDueCardsWidget(next_date))
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon = QLabel("🎉")
+        icon.setStyleSheet("font-size: 64px;")
+        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(icon)
+        msg = QLabel("All caught up!")
+        msg.setStyleSheet("font-size: 28px; font-weight: bold; color: #4ec9b0;")
+        msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(msg)
+        sub = QLabel(f"No cards are due today.\nNext review: {next_date}")
+        sub.setStyleSheet("font-size: 16px; color: #569cd6; margin-top: 8px;")
+        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(sub)
+        lay.addSpacing(24)
+        btn = QPushButton("Shuffle All Cards & Restart")
+        btn.setStyleSheet(_btn_style("#6a1b9a", "#8e24aa", "#4a148c"))
+        btn.setFixedHeight(36)
+        btn.setFixedWidth(240)
+        btn.clicked.connect(self._shuffle_all)
+        lay.addWidget(btn, alignment=Qt.AlignmentFlag.AlignCenter)
+        self._replace_splitter_with(w)
 
     def _show_session_complete(self):
         w = QWidget()
         lay = QVBoxLayout(w)
         lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lbl = QLabel("🏆  Session Complete!")
-        lbl.setStyleSheet("font-size: 32px; font-weight: bold; color: #ffcb6b;")
+        lbl.setStyleSheet("font-size: 32px; font-weight: bold; color: #dcdcaa;")
         lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sub = QLabel(f"You reviewed all {len(self.due_questions)} due cards.")
-        sub.setStyleSheet("font-size: 16px; color: #82aaff; margin-top: 8px;")
+        sub.setStyleSheet("font-size: 16px; color: #569cd6; margin-top: 8px;")
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(lbl)
         lay.addWidget(sub)
+        lay.addSpacing(24)
+        btn = QPushButton("Shuffle All Cards & Restart")
+        btn.setStyleSheet(_btn_style("#6a1b9a", "#8e24aa", "#4a148c"))
+        btn.setFixedHeight(36)
+        btn.setFixedWidth(240)
+        btn.clicked.connect(self._shuffle_all)
+        lay.addWidget(btn, alignment=Qt.AlignmentFlag.AlignCenter)
         self._replace_splitter_with(w)
         self.bottom_bar.progress_label.setText(
             f"{len(self.due_questions)} of {len(self.due_questions)} done"
         )
 
     def _replace_splitter_with(self, widget: QWidget):
-        widget.setStyleSheet("background: #1a1f2e;")
+        widget.setStyleSheet("background: #1e1e1e;")
         central = self.centralWidget()
         layout = central.layout()
-        layout.replaceWidget(self.splitter, widget)
-        self.splitter.hide()
+        if self._overlay_widget is not None:
+            layout.replaceWidget(self._overlay_widget, widget)
+            self._overlay_widget.deleteLater()
+        else:
+            layout.replaceWidget(self.splitter, widget)
+            self.splitter.hide()
+        self._overlay_widget = widget
         widget.show()
+
+    def _restore_splitter(self):
+        if self._overlay_widget is not None:
+            central = self.centralWidget()
+            layout = central.layout()
+            layout.replaceWidget(self._overlay_widget, self.splitter)
+            self._overlay_widget.deleteLater()
+            self._overlay_widget = None
+            self.splitter.show()
 
     # ── Settings / About ─────────────────────────────────────────────────
 
@@ -857,6 +996,7 @@ class MainWindow(QMainWindow):
             "<b>Ctrl+Enter</b> — Submit<br>"
             "<b>Ctrl+Right</b> — Next Card<br>"
             "<b>Ctrl+R</b> — Reload Session<br>"
+            "<b>Ctrl+Shift+R</b> — Shuffle All Cards<br>"
             "<b>Ctrl+Q</b> — Quit",
         )
 
@@ -871,14 +1011,14 @@ def main():
 
     # Force dark palette
     palette = app.palette()
-    palette.setColor(QPalette.ColorRole.Window, QColor("#1a1f2e"))
-    palette.setColor(QPalette.ColorRole.WindowText, QColor("#cdd3de"))
-    palette.setColor(QPalette.ColorRole.Base, QColor("#1a1f2e"))
-    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#252d3d"))
-    palette.setColor(QPalette.ColorRole.Text, QColor("#cdd3de"))
-    palette.setColor(QPalette.ColorRole.Button, QColor("#252d3d"))
-    palette.setColor(QPalette.ColorRole.ButtonText, QColor("#cdd3de"))
-    palette.setColor(QPalette.ColorRole.Highlight, QColor("#3d4f6e"))
+    palette.setColor(QPalette.ColorRole.Window, QColor("#1e1e1e"))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor("#d4d4d4"))
+    palette.setColor(QPalette.ColorRole.Base, QColor("#1e1e1e"))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#252526"))
+    palette.setColor(QPalette.ColorRole.Text, QColor("#d4d4d4"))
+    palette.setColor(QPalette.ColorRole.Button, QColor("#3c3c3c"))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor("#d4d4d4"))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor("#264f78"))
     palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
     app.setPalette(palette)
 

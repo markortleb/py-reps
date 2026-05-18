@@ -1,7 +1,7 @@
 {
   "001_remove_punctuation": {
     "times_correct": 0,
-    "times_incorrect": 1,
+    "times_incorrect": 2,
     "last_reviewed": "2026-05-17",
     "next_review": "2026-05-18",
     "interval_days": 1
