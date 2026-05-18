@@ -1,0 +1,8 @@
+.venv/
+pyreps/working/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.env
+pyreps_config.json
