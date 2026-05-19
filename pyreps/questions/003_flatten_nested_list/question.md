@@ -10,13 +10,21 @@ The input may contain integers, strings, or further nested lists at any depth.
 
 ## Examples
 
-```python
-flatten([1, [2, 3], [4, [5, 6]]])       # → [1, 2, 3, 4, 5, 6]
-flatten([[1, 2], [3, [4, [5]]]])         # → [1, 2, 3, 4, 5]
-flatten([])                              # → []
-flatten([1, 2, 3])                       # → [1, 2, 3]
-flatten([[[[[42]]]]])                    # → [42]
+**Example 1:**
 ```
+Input:  nested = [1, [2, 3], [4, [5, 6]]]
+Output: [1, 2, 3, 4, 5, 6]
+```
+Explanation: The top-level `1` is kept as-is. `[2, 3]` is one level deep and unwrapped. `[4, [5, 6]]` is two levels deep — `4` comes out directly and `[5, 6]` is unwrapped one more time.
+
+---
+
+**Example 2:**
+```
+Input:  nested = [[[1]], [2, [3, [4]]]]
+Output: [1, 2, 3, 4]
+```
+Explanation: Recursion goes as deep as needed — `[[1]]` is unwrapped twice to yield `1`, and `[3, [4]]` is unwrapped until all values are flat.
 
 ## Constraints
 

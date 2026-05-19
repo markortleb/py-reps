@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QTextBrowser, QPlainTextEdit, QLabel, QPushButton,
     QScrollArea, QFrame, QDialog, QLineEdit, QDialogButtonBox,
-    QFileDialog, QMenuBar, QMessageBox, QStatusBar,
+    QFileDialog, QMenuBar, QMessageBox, QStatusBar, QSizePolicy,
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize
 from PyQt6.QtGui import (
@@ -309,9 +309,10 @@ class SettingsDialog(QDialog):
 class ResultsPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedWidth(300)
+        self.setMinimumHeight(80)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(6)
 
         header = QLabel("Test Results")
         header.setStyleSheet("font-weight: bold; font-size: 14px; color: #d4d4d4;")
@@ -319,8 +320,10 @@ class ResultsPanel(QWidget):
 
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
-        self.scroll.setStyleSheet("border: none; background: #1e1e1e;")
+        self.scroll.setStyleSheet("QScrollArea { border: none; background: #1e1e1e; }")
+        self.scroll.viewport().setStyleSheet("background: #1e1e1e;")
         self.results_container = QWidget()
+        self.results_container.setStyleSheet("background: #1e1e1e;")
         self.results_layout = QVBoxLayout(self.results_container)
         self.results_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll.setWidget(self.results_container)
@@ -340,10 +343,17 @@ class ResultsPanel(QWidget):
     def show_results(self, results: list, raw_output: str):
         self.clear()
         if not results:
-            label = QLabel("No test results found.\n\nRaw output:\n" + raw_output[:500])
-            label.setWordWrap(True)
-            label.setStyleSheet("color: #f44747; font-size: 12px;")
-            self.results_layout.addWidget(label)
+            lbl = QLabel("Could not parse test output:")
+            lbl.setStyleSheet("color: #f44747; font-size: 12px; font-weight: bold; background: transparent;")
+            self.results_layout.addWidget(lbl)
+            raw_box = QPlainTextEdit(raw_output)
+            raw_box.setReadOnly(True)
+            raw_box.setStyleSheet(
+                "background: #2d2d2d; color: #d4d4d4; border: 1px solid #3c3c3c; "
+                "font-family: 'Courier New', monospace; font-size: 11px;"
+            )
+            raw_box.setMinimumHeight(180)
+            self.results_layout.addWidget(raw_box)
             return
 
         passed = sum(1 for r in results if r["status"] == "PASSED")
@@ -365,13 +375,13 @@ class ResultsPanel(QWidget):
                 name = name.split("::")[-1]
 
             title = QLabel(f"{icon} {name}")
-            title.setStyleSheet(f"color: {color}; font-weight: bold; font-size: 12px;")
+            title.setStyleSheet(f"background: transparent; color: {color}; font-weight: bold; font-size: 12px;")
             title.setWordWrap(True)
             fl.addWidget(title)
 
             if r.get("detail"):
                 detail = QLabel(r["detail"])
-                detail.setStyleSheet("color: #9cdcfe; font-size: 11px; font-family: monospace;")
+                detail.setStyleSheet("background: transparent; color: #9cdcfe; font-size: 11px; font-family: monospace;")
                 detail.setWordWrap(True)
                 fl.addWidget(detail)
 
@@ -393,7 +403,6 @@ class ResultsPanel(QWidget):
 class QuestionPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedWidth(300)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
 
@@ -479,6 +488,20 @@ class CodeEditor(QPlainTextEdit):
         )
         self._highlighter = PythonHighlighter(self.document())
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Tab:
+            self.insertPlainText("    ")
+        elif event.key() == Qt.Key.Key_Backtab:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.MoveOperation.StartOfLine, cursor.MoveMode.KeepAnchor)
+            sel = cursor.selectedText()
+            if sel.startswith("    "):
+                cursor.movePosition(cursor.MoveOperation.StartOfLine)
+                for _ in range(4):
+                    cursor.deleteChar()
+        else:
+            super().keyPressEvent(event)
+
     def load_template(self, template_path: Path):
         if template_path.exists():
             self.setPlainText(template_path.read_text())
@@ -487,42 +510,72 @@ class CodeEditor(QPlainTextEdit):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Answer panel (read-only reference solution)
+# Collapsible solution panel
 # ─────────────────────────────────────────────────────────────────────────────
 
-class AnswerPanel(QWidget):
+class CollapsibleSection(QWidget):
+    toggled = pyqtSignal(bool)  # True = expanded
+
+    HEADER_H = 36
+
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setMinimumHeight(self.HEADER_H)
+        self.setMaximumHeight(self.HEADER_H)  # collapsed by default
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        header = QWidget()
-        header.setFixedHeight(28)
-        header.setStyleSheet("background: #252526; border-top: 1px solid #3c3c3c;")
-        hl = QHBoxLayout(header)
-        hl.setContentsMargins(12, 0, 12, 0)
-        lbl = QLabel("Reference Answer")
-        lbl.setStyleSheet("color: #dcdcaa; font-size: 12px; font-weight: bold;")
-        hl.addWidget(lbl)
-        layout.addWidget(header)
+        self.toggle_btn = QPushButton("▶   Show Solution")
+        self.toggle_btn.setCheckable(True)
+        self.toggle_btn.setFixedHeight(self.HEADER_H)
+        self.toggle_btn.setStyleSheet(
+            "QPushButton { background: #252526; color: #dcdcaa; border: none; "
+            "border-top: 1px solid #3c3c3c; border-bottom: 1px solid #3c3c3c; "
+            "font-size: 13px; font-weight: bold; text-align: left; padding-left: 12px; }"
+            "QPushButton:hover { background: #2d2d2d; }"
+            "QPushButton:checked { color: #4ec9b0; }"
+        )
+        self.toggle_btn.toggled.connect(self._on_toggle)
+        layout.addWidget(self.toggle_btn)
 
-        self.editor = CodeEditor()
-        self.editor.setReadOnly(True)
-        self.editor.setStyleSheet(
+        self.content = QWidget()
+        self.content.setStyleSheet("background: #1e1e1e;")
+        cl = QVBoxLayout(self.content)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(0)
+
+        self.answer_editor = CodeEditor()
+        self.answer_editor.setReadOnly(True)
+        self.answer_editor.setStyleSheet(
             "background: #1e1e1e; color: #9cdcfe; border: none; "
             "selection-background-color: #264f78;"
         )
-        layout.addWidget(self.editor)
+        cl.addWidget(self.answer_editor)
+
+        self.content.setVisible(False)
+        layout.addWidget(self.content)
+
+    def _on_toggle(self, checked: bool):
+        self.content.setVisible(checked)
+        self.toggle_btn.setText(
+            "▼   Hide Solution" if checked else "▶   Show Solution"
+        )
+        if checked:
+            self.setMaximumHeight(16777215)
+        else:
+            self.setMaximumHeight(self.HEADER_H)
+        self.toggled.emit(checked)
+
+    def collapse(self):
+        self.toggle_btn.setChecked(False)
 
     def load_answer(self, path: Path):
         if path.exists():
-            self.editor.setPlainText(path.read_text())
+            self.answer_editor.setPlainText(path.read_text())
         else:
-            self.editor.setPlainText("# answer.py not found for this question\n")
-
-    def clear(self):
-        self.editor.setPlainText("")
+            self.answer_editor.setPlainText("# answer.py not found for this question\n")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -533,7 +586,7 @@ class BottomBar(QWidget):
     submit_clicked = pyqtSignal()
     skip_clicked = pyqtSignal()
     next_clicked = pyqtSignal()
-    answer_toggled = pyqtSignal(bool)
+    retry_clicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -554,19 +607,6 @@ class BottomBar(QWidget):
         self.progress_label.setStyleSheet("color: #858585; font-size: 12px;")
         layout.addWidget(self.progress_label)
 
-        self.answer_btn = QPushButton("Show Answer")
-        self.answer_btn.setCheckable(True)
-        self.answer_btn.setFixedHeight(32)
-        self.answer_btn.setStyleSheet(
-            "QPushButton { background: #3c3c3c; color: #d4d4d4; border: 1px solid #555555; "
-            "border-radius: 4px; padding: 0 14px; font-size: 13px; }"
-            "QPushButton:hover { background: #4a4a4a; }"
-            "QPushButton:checked { background: #094771; color: #9cdcfe; border-color: #007acc; }"
-            "QPushButton:checked:hover { background: #0e639c; }"
-        )
-        self.answer_btn.toggled.connect(self._on_answer_btn_toggled)
-        layout.addWidget(self.answer_btn)
-
         self.submit_btn = QPushButton("Submit")
         self.submit_btn.setShortcut(QKeySequence("Ctrl+Return"))
         self.submit_btn.setStyleSheet(_btn_style("#1565c0", "#1976d2", "#0d47a1"))
@@ -580,6 +620,13 @@ class BottomBar(QWidget):
         self.skip_btn.clicked.connect(self.skip_clicked)
         layout.addWidget(self.skip_btn)
 
+        self.retry_btn = QPushButton("↺ Retry")
+        self.retry_btn.setStyleSheet(_btn_style("#5a3e00", "#7a5500", "#3a2800"))
+        self.retry_btn.setFixedHeight(32)
+        self.retry_btn.setVisible(False)
+        self.retry_btn.clicked.connect(self.retry_clicked)
+        layout.addWidget(self.retry_btn)
+
         self.next_btn = QPushButton("Next Card  →")
         self.next_btn.setShortcut(QKeySequence("Ctrl+Right"))
         self.next_btn.setStyleSheet(_btn_style("#1b5e20", "#2e7d32", "#003300"))
@@ -588,20 +635,21 @@ class BottomBar(QWidget):
         self.next_btn.clicked.connect(self.next_clicked)
         layout.addWidget(self.next_btn)
 
-    def _on_answer_btn_toggled(self, checked: bool):
-        self.answer_btn.setText("Hide Answer" if checked else "Show Answer")
-        self.answer_toggled.emit(checked)
-
     def set_question(self, name: str, index: int, total: int):
         self.question_label.setText(name)
         self.progress_label.setText(f"{index} of {total} due today")
         self.next_btn.setVisible(False)
+        self.retry_btn.setVisible(False)
         self.submit_btn.setEnabled(True)
-        self.answer_btn.setChecked(False)
 
     def show_next_button(self):
         self.next_btn.setVisible(True)
+        self.retry_btn.setVisible(True)
         self.submit_btn.setEnabled(False)
+
+    def show_submit_for_retry(self):
+        self.submit_btn.setEnabled(True)
+        self.retry_btn.setVisible(False)
 
 
 def _btn_style(bg: str, hover: str, pressed: str) -> str:
@@ -658,6 +706,7 @@ class MainWindow(QMainWindow):
         self.submitted: bool = False
         self._runner: TestRunnerThread | None = None
         self._overlay_widget: QWidget | None = None
+        self._sr_recorded: bool = False
 
         self._setup_ui()
         self._setup_menu()
@@ -670,40 +719,34 @@ class MainWindow(QMainWindow):
 
         central = QWidget()
         self.setCentralWidget(central)
+        self._content_widget = central
         root_layout = QVBoxLayout(central)
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        # Three-panel splitter
-        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        # Single vertical splitter: question / solution / editor / results
+        self.splitter = QSplitter(Qt.Orientation.Vertical)
         self.splitter.setHandleWidth(2)
-        self.splitter.setStyleSheet(
-            "QSplitter::handle { background: #3c3c3c; }"
-        )
+        self.splitter.setStyleSheet("QSplitter::handle { background: #3c3c3c; }")
 
         self.question_panel = QuestionPanel()
         self.splitter.addWidget(self.question_panel)
 
-        self.center_splitter = QSplitter(Qt.Orientation.Vertical)
-        self.center_splitter.setHandleWidth(2)
-        self.center_splitter.setStyleSheet(
-            "QSplitter::handle { background: #3c3c3c; }"
-        )
+        self.collapsible_answer = CollapsibleSection()
+        self.collapsible_answer.toggled.connect(self._on_solution_toggle)
+        self.splitter.addWidget(self.collapsible_answer)
+        self.splitter.setCollapsible(1, False)
+
         self.editor = CodeEditor()
-        self.center_splitter.addWidget(self.editor)
-        self.answer_panel = AnswerPanel()
-        self.answer_panel.setVisible(False)
-        self.center_splitter.addWidget(self.answer_panel)
-        self.center_splitter.setStretchFactor(0, 1)
-        self.center_splitter.setStretchFactor(1, 1)
-        self.splitter.addWidget(self.center_splitter)
+        self.splitter.addWidget(self.editor)
 
         self.results_panel = ResultsPanel()
         self.splitter.addWidget(self.results_panel)
 
-        self.splitter.setStretchFactor(0, 0)
-        self.splitter.setStretchFactor(1, 1)
-        self.splitter.setStretchFactor(2, 0)
+        self.splitter.setStretchFactor(0, 2)
+        self.splitter.setStretchFactor(1, 0)
+        self.splitter.setStretchFactor(2, 3)
+        self.splitter.setStretchFactor(3, 1)
 
         root_layout.addWidget(self.splitter, 1)
 
@@ -711,7 +754,7 @@ class MainWindow(QMainWindow):
         self.bottom_bar.submit_clicked.connect(self._on_submit)
         self.bottom_bar.skip_clicked.connect(self._on_skip)
         self.bottom_bar.next_clicked.connect(self._on_next)
-        self.bottom_bar.answer_toggled.connect(self._on_answer_toggle)
+        self.bottom_bar.retry_clicked.connect(self._on_retry)
         root_layout.addWidget(self.bottom_bar)
 
         # Status bar
@@ -814,8 +857,10 @@ class MainWindow(QMainWindow):
         # Load UI panels
         self.question_panel.load_question(question_id, question_dir / "question.md")
         self.editor.load_template(working_dir / "solution.py")
-        self.answer_panel.load_answer(working_dir / "answer.py")
+        self.collapsible_answer.load_answer(working_dir / "answer.py")
+        self.collapsible_answer.collapse()
         self.results_panel.clear()
+        self._sr_recorded = False
 
         display_name = question_id.replace("_", " ").title()
         self.bottom_bar.set_question(
@@ -847,18 +892,41 @@ class MainWindow(QMainWindow):
     def _on_tests_done(self, results: list, raw: str, question_id: str):
         self.results_panel.show_results(results, raw)
         all_passed = results and all(r["status"] == "PASSED" for r in results)
-        self.sr.record_result(question_id, correct=all_passed)
-        self.submitted = True
-        self.bottom_bar.show_next_button()
-        status = "All tests passed!" if all_passed else "Some tests failed."
-        self.status_bar.showMessage(status)
+        if all_passed:
+            if not self._sr_recorded:
+                self.sr.record_result(question_id, correct=True)
+                self._sr_recorded = True
+            self.submitted = True
+            self.bottom_bar.show_next_button()
+            self.status_bar.showMessage("All tests passed!")
+        else:
+            self.bottom_bar.submit_btn.setEnabled(True)
+            self.status_bar.showMessage("Some tests failed — fix your code and resubmit.")
 
-    def _on_answer_toggle(self, checked: bool):
-        self.answer_panel.setVisible(checked)
+    def _on_solution_toggle(self, expanded: bool):
+        sizes = self.splitter.sizes()
+        if expanded:
+            give = max(200, self.splitter.height() // 4)
+            take = min(give, sizes[2] - 150)
+            sizes[1] = sizes[1] - CollapsibleSection.HEADER_H + take
+            sizes[2] = max(150, sizes[2] - take)
+        else:
+            sizes[2] += sizes[1] - CollapsibleSection.HEADER_H
+            sizes[1] = CollapsibleSection.HEADER_H
+        self.splitter.setSizes(sizes)
+
+    def _on_retry(self):
+        working_dir = self.root_dir / "working"
+        self.editor.load_template(working_dir / "solution.py")
+        self.results_panel.clear()
+        self.submitted = False
+        self.bottom_bar.show_submit_for_retry()
+        self.status_bar.showMessage("Editor reset — give it another shot!")
 
     def _on_skip(self):
         question_id = self.due_questions[self.current_index]
-        self.sr.record_result(question_id, correct=False)
+        if not self.submitted:
+            self.sr.record_result(question_id, correct=False)
         self._advance()
 
     def _on_next(self):
@@ -866,6 +934,7 @@ class MainWindow(QMainWindow):
 
     def _advance(self):
         self.current_index += 1
+        self.submitted = False
         if self.current_index >= len(self.due_questions):
             self._show_session_complete()
         else:
@@ -950,8 +1019,7 @@ class MainWindow(QMainWindow):
 
     def _replace_splitter_with(self, widget: QWidget):
         widget.setStyleSheet("background: #1e1e1e;")
-        central = self.centralWidget()
-        layout = central.layout()
+        layout = self._content_widget.layout()
         if self._overlay_widget is not None:
             layout.replaceWidget(self._overlay_widget, widget)
             self._overlay_widget.deleteLater()
@@ -963,12 +1031,17 @@ class MainWindow(QMainWindow):
 
     def _restore_splitter(self):
         if self._overlay_widget is not None:
-            central = self.centralWidget()
-            layout = central.layout()
+            layout = self._content_widget.layout()
             layout.replaceWidget(self._overlay_widget, self.splitter)
             self._overlay_widget.deleteLater()
             self._overlay_widget = None
             self.splitter.show()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        w = self.centralWidget().width()
+        m = max(24, int(w * 0.10))
+        self.centralWidget().layout().setContentsMargins(m, 0, m, 0)
 
     # ── Settings / About ─────────────────────────────────────────────────
 

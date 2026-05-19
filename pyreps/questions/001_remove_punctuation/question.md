@@ -10,12 +10,21 @@ Punctuation includes any character that is not a letter or a digit or a space.
 
 ## Examples
 
-```python
-remove_punctuation("Hello, World!")  # → "hello world"
-remove_punctuation("It's a test.")   # → "its a test"
-remove_punctuation("No-change")      # → "nochange"
-remove_punctuation("")               # → ""
+**Example 1:**
 ```
+Input:  s = "Hello, World!"
+Output: "hello world"
+```
+Explanation: The comma and exclamation mark are punctuation and are removed. All letters are lowercased.
+
+---
+
+**Example 2:**
+```
+Input:  s = "It's a-maze-ing..."
+Output: "its amazeing"
+```
+Explanation: The apostrophe, hyphens, and ellipsis are all punctuation and are stripped. Spaces between words are preserved.
 
 ## Constraints
 

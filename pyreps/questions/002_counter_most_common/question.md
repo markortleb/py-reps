@@ -10,12 +10,21 @@ If the list is empty, return `None`.
 
 ## Examples
 
-```python
-most_common_word(["apple", "banana", "apple", "cherry"])  # → "apple"
-most_common_word(["cat", "dog", "cat", "cat", "dog"])     # → "cat"
-most_common_word(["only"])                                 # → "only"
-most_common_word([])                                       # → None
+**Example 1:**
 ```
+Input:  words = ["apple", "banana", "apple", "cherry", "banana", "apple"]
+Output: "apple"
+```
+Explanation: "apple" appears 3 times, "banana" 2 times, and "cherry" 1 time. "apple" is the most frequent.
+
+---
+
+**Example 2:**
+```
+Input:  words = ["cat", "dog", "cat", "dog", "dog"]
+Output: "dog"
+```
+Explanation: "dog" appears 3 times and "cat" appears 2 times, so "dog" is returned.
 
 ## Constraints
 
